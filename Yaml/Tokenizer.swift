@@ -72,21 +72,21 @@ let tokenPatterns: [TokenPattern] = [
   (.YamlDirective, regex("^%YAML(?= )")),
   (.DocStart, regex("^---")),
   (.DocEnd, regex("^\\.\\.\\.")),
-  (.Comment, regex("^#.*|^\(bBreak) *(#.*)?(?=\(bBreak)|$)")),
+  (.Comment, regex("^#.*|^" + bBreak + " *(#.*)?(?=" + bBreak + "|$)")),
   (.Space, regex("^ +")),
-  (.NewLine, regex("^\(bBreak) *")),
+  (.NewLine, regex("^" + bBreak + " *")),
   (.Dash, dashPattern),
-  (.Null, regex("^(null|Null|NULL|~)\(finish)")),
-  (.True, regex("^(true|True|TRUE)\(finish)")),
-  (.False, regex("^(false|False|FALSE)\(finish)")),
-  (.InfinityP, regex("^\\+?\\.(inf|Inf|INF)\(finish)")),
-  (.InfinityN, regex("^-\\.(inf|Inf|INF)\(finish)")),
-  (.NaN, regex("^\\.(nan|NaN|NAN)\(finish)")),
-  (.Int, regex("^[-+]?[0-9]+\(finish)")),
-  (.IntOct, regex("^0o[0-7]+\(finish)")),
-  (.IntHex, regex("^0x[0-9a-fA-F]+\(finish)")),
-  (.IntSex, regex("^[0-9]{2}(:[0-9]{2})+\(finish)")),
-  (.Double, regex("^[-+]?(\\.[0-9]+|[0-9]+(\\.[0-9]*)?)([eE][-+]?[0-9]+)?\(finish)")),
+  (.Null, regex("^(null|Null|NULL|~)" + finish)),
+  (.True, regex("^(true|True|TRUE)" + finish)),
+  (.False, regex("^(false|False|FALSE)" + finish)),
+  (.InfinityP, regex("^\\+?\\.(inf|Inf|INF)" + finish)),
+  (.InfinityN, regex("^-\\.(inf|Inf|INF)" + finish)),
+  (.NaN, regex("^\\.(nan|NaN|NAN)" + finish)),
+  (.Int, regex("^[-+]?[0-9]+" + finish)),
+  (.IntOct, regex("^0o[0-7]+" + finish)),
+  (.IntHex, regex("^0x[0-9a-fA-F]+" + finish)),
+  (.IntSex, regex("^[0-9]{2}(:[0-9]{2})+" + finish)),
+  (.Double, regex("^[-+]?(\\.[0-9]+|[0-9]+(\\.[0-9]*)?)([eE][-+]?[0-9]+)?" + finish)),
   (.Anchor, regex("^&\\w+")),
   (.Alias, regex("^\\*\\w+")),
   (.Comma, regex("^,")),
@@ -94,16 +94,16 @@ let tokenPatterns: [TokenPattern] = [
   (.CloseSB, regex("^\\]")),
   (.OpenCB, regex("^\\{")),
   (.CloseCB, regex("^\\}")),
-  (.QuestionMark, regex("^\\?( +|(?=\(bBreak)))")),
+  (.QuestionMark, regex("^\\?( +|(?=" + bBreak + "))")),
   (.ColonFO, regex("^:(?!:)")),
   (.ColonFI, regex("^:(?!:)")),
   (.Literal, regex("^\\|.*")),
   (.Folded, regex("^>.*")),
   (.Reserved, regex("^[@`]")),
-  (.StringDQ, regex("^\"([^\\\\\"]|\\\\(.|\(bBreak)))*\"")),
+  (.StringDQ, regex("^\"([^\\\\\"]|\\\\(.|" + bBreak + "))*\"")),
   (.StringSQ, regex("^'([^']|'')*'")),
-  (.StringFO, regex("^\(plainOutPattern)(?=:([ \\t]|\(bBreak))|\(bBreak)|$)")),
-  (.StringFI, regex("^\(plainInPattern)")),
+  (.StringFO, regex("^" + plainOutPattern + "(?=:([ \\t]|" + bBreak + ")|" + bBreak + "|$)")),
+  (.StringFI, regex("^" + plainInPattern)),
 ]
 
 func escapeErrorContext (text: String) -> String {
@@ -213,8 +213,10 @@ func tokenize (text: String) -> Result<[TokenMatch]> {
             continue
           }
           let indent = (indents.last ?? 0)
-          let blockPattern = regex(("^\(bBreak)( *| {\(indent),}" +
-              "\(plainOutPattern))(?=\(bBreak)|$)"))
+
+          let blockPatternStr : String = "^" + bBreak + "( *| {" + String(indent) + ",}" + plainOutPattern + ")(?=" + bBreak + "|$)"
+
+          let blockPattern = regex(blockPatternStr)
           var block = text
                 |> substringWithRange(range)
                 |> replace(regex("^[ \\t]+|[ \\t]+$"), template: "")
@@ -225,8 +227,9 @@ func tokenize (text: String) -> Result<[TokenMatch]> {
               break
             }
             let s = text |> substringWithRange(range)
+            let regexStr : String = "^" + bBreak + "[ \\t]*|[ \\t]+$"
             block += "\n" +
-                replace(regex("^\(bBreak)[ \\t]*|[ \\t]+$"), template: "")(s)
+                replace(regex(regexStr), template: "")(s)
             text = text |> substringFromIndex(range.location + range.length)
           }
           matchList.append(TokenMatch(.String, block))
